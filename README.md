@@ -16,5 +16,5 @@ This project evaluates how variables such as attack type, industry sector, and r
 
 ## Technology Used: R Studio
 
-**[Read the full report here:](Project Report .pdf)
+**[Read the full report here:](https://github.com/charlotterbaker/StatisticalAnalysisProject/blob/main/Project%20Report%20.pdf)**
 
