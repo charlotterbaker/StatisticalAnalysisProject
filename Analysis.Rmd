@@ -1,0 +1,415 @@
+
+---
+title: ""
+author: ""
+output:
+  pdf_document:
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+options(tinytex.verbose = TRUE)
+```
+
+
+\newpage
+
+\begin{center}
+
+\includegraphics[width=0.6\textwidth]{uofsc.png} \\[1cm]
+
+
+\textbf{\LARGE Statistics 516: Course Project} \\[1cm]
+
+\textbf{\Huge Analyzing The Impact and Recovery \\ of Global Cybersecurity Threats \\ (2015–2024)} \\[1.5cm]
+
+
+\textbf{\LARGE Charlotte Baker} \\[1.5cm]
+
+
+\end{center}
+
+\newpage
+
+
+# I. Introduction
+This project utilizes the dataset titled **Global Cybersecurity Threats (2015–2024)**, which consists of 3,000 documented cybersecurity incidents across various countries and sectors. The dataset includes variables such as type of attack, affected industry, country of occurrence, financial damage (in millions of USD), recovery time, and the number of affected users.
+
+**Source**: Kaggle – Global Cybersecurity Threats Dataset: https://www.kaggle.com/datasets/atharvasoundankar/global-cybersecurity-threats-2015-2024?resource=download
+
+As a **Computer Information Systems** major who's interested in cybersecurity, this dataset offers an opportunity to analyze how different threat types affect different industries and countries in terms of financial loss and disruption. Therefore, it is relevant to my academic goals and professional ambitions. By investigating this dataset, I aim to gain insights into the consequences of cyber threats and develop a data-informed understanding of how impact and recovery patterns vary.
+
+
+### Selected Variables
+
+| Variable Name                         | Type        | Description                                     | Units / Notes       |
+|--------------------------------------|-------------|-------------------------------------------------|----------------------|
+| `Attack Type`                        | Categorical | Method of the cyberattack    | N/A                  |
+| `Country`                            | Categorical | Country where the incident occurred            | N/A                  |
+| `Target Industry`                    | Categorical | Sector targeted  | N/A                  |
+| `Incident Resolution Time (in Hours)`| Quantitative| Time taken to recover from the incident        | Hours                |
+| `Number of Affected Users`           | Quantitative| Count of user records affected                 | Raw Count            |
+| `Financial Loss (in Million $)`      | Quantitative| Economic damage from the attack                | USD (in Millions)    |
+
+**Outcome Variable**:  
+`Financial Loss (in Million $)` is the chosen outcome variable. It reflects the primary impact that the analysis will focus on predicting and explaining.
+
+
+### Background and Literature Review
+
+Cybersecurity threats have grown significantly in scale and complexity in recent years, with organizations facing increasing risks of financial damage due to cyberattacks. According to a study by Edwards, Hofmeyr, and Forrest (2016), financial losses from cybersecurity incidents tend to follow a heavy-tailed distribution, where a small number of extreme events account for a disproportionately large portion of total damages. Their research also emphasizes the difficulty in predicting financial impact using standard incident characteristics due to the variability and outliers in breach data.
+
+This project builds on those insights by evaluating how variables such as attack type, industry sector, and recovery time relate to financial loss. Using this real-world cybersecurity incident data from 2015–2024, the analysis looks to identify whether any patterns or relationships exist between these characteristics and the extent of economic damage, and whether they can be meaningfully modeled using traditional statistical methods.
+
+
+# II. Exploratory Data Analysis
+
+## Summary Statistics
+
+```{r load-libraries-and-data, message=FALSE, warning=FALSE}
+#Summary stats
+#Libraries
+library(tidyverse)
+library(knitr)
+
+#Loading data
+df <- read_csv("Global_Cybersecurity_Threats_2015-2024.csv")
+
+#Renaming columns to shorter names
+df <- df %>%
+  rename(
+    attack_type = `Attack Type`,
+    country = `Country`,
+    sector = `Target Industry`,
+    financial_loss = `Financial Loss (in Million $)`,
+    users_affected = `Number of Affected Users`,
+    recovery_time = `Incident Resolution Time (in Hours)`
+  )
+
+#Packages
+library(dplyr)
+library(knitr)
+
+#Financial Loss
+df %>%
+  summarise(
+    Min = min(financial_loss),
+    Q1 = quantile(financial_loss, 0.25),
+    Median = median(financial_loss),
+    Mean = mean(financial_loss),
+    Q3 = quantile(financial_loss, 0.75),
+    Max = max(financial_loss),
+    SD = sd(financial_loss),
+    n = n()
+  ) %>%
+  kable(caption = "Summary Statistics for Financial Loss (in Millions USD)")
+
+#Number of Affected Users
+df %>%
+  summarise(
+    Min = min(users_affected),
+    Q1 = quantile(users_affected, 0.25),
+    Median = median(users_affected),
+    Mean = mean(users_affected),
+    Q3 = quantile(users_affected, 0.75),
+    Max = max(users_affected),
+    SD = sd(users_affected),
+    n = n()
+  ) %>%
+  kable(caption = "Summary Statistics for Number of Affected Users")
+
+#Recovery Time
+df %>%
+  summarise(
+    Min = min(recovery_time),
+    Q1 = quantile(recovery_time, 0.25),
+    Median = median(recovery_time),
+    Mean = mean(recovery_time),
+    Q3 = quantile(recovery_time, 0.75),
+    Max = max(recovery_time),
+    SD = sd(recovery_time),
+    n = n()
+  ) %>%
+  kable(caption = "Summary Statistics for Recovery Time (in Hours)")
+
+
+```
+
+The dataset is clean with no missing values across any of the variables used in this analysis. These are the full summary statistics for the three quantitative variables: **financial loss**, **number of affected users**, and **recovery time**. Each variable is summarized individually, providing a clear view of its central tendency, spread, and range.   
+
+The average financial loss due to a cybersecurity incident was approximately **$50.49 million**, with a standard deviation of **$28.96 million**, suggesting wide variation in financial impacts. The average number of users affected was around **504,684**, again with substantial variability. Recovery times averaged approximately **36.5 hours**, indicating that while some incidents were resolved quickly, others took much longer.  
+
+These results reinforce the need for further analysis to determine which characteristics, if any, significantly influence financial loss. Next, we will create visualizations to support exploration into research questions. 
+
+## Visualizations
+
+```{r}
+#Boxplot of Financial Loss by Binned Recovery Time
+df <- df %>%
+  mutate(recovery_bin = cut(recovery_time, breaks = c(0, 12, 24, 48, 72), labels = c("0-12h", "12-24h", "24-48h", "48-72h")))
+
+ggplot(df, aes(x = recovery_bin, y = financial_loss)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(
+    title = "Financial Loss by Recovery Time Bins",
+    x = "Recovery Time (Hours)",
+    y = "Financial Loss (in Millions USD)"
+  ) +
+  theme_minimal()
+
+```
+
+The boxplot shows the distribution of financial losses grouped by recovery time ranges. Across all bins, the median financial loss remains close to $50 million, and the interquartile ranges are fairly similar. This suggests that recovery time does not have a strong visual relationship with the amount of financial loss. There is no clear pattern of higher or lower financial loss across quicker or longer recovery periods. These results support the need to explore other factors, such as industry sector or attack type, for stronger predictors of financial impact.
+
+
+```{r}
+#Boxplot of Financial Loss by Attack Type
+ggplot(df, aes(x = attack_type, y = financial_loss)) +
+  geom_boxplot(fill = "aquamarine") +
+  labs(
+    title = "Financial Loss by Attack Type",
+    x = "Attack Type",
+    y = "Financial Loss (in Millions USD)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  #Tilt labels
+
+```
+
+The boxplot compares the financial losses associated with different types of cyberattacks. Although there is some variation, most attack types show overlapping interquartile ranges and similar medians. This suggests that **no single attack type consistently leads to higher financial losses.** Thus, attack type alone may not be a strong or reliable predictor of financial impact.
+
+These initial exploratory analyses did not reveal strong or consistent relationships between financial loss and the variables recovery time or attack type. While distributions appeared uniform and no clear trends emerged, the findings suggested that additional factors could be at play.
+
+To further investigate, I conducted exploratory analysis focusing on the categorical variable **industry sector**. This is meant to potentially see more meaningful patterns in the data and help refine the research questions.
+
+
+```{r}
+#Boxplot for Financial Loss by Industry Sector
+ggplot(df, aes(x = sector, y = financial_loss)) +
+  geom_boxplot(fill = "orchid") +
+  labs(
+    title = "Financial Loss by Industry Sector",
+    x = "Industry Sector",
+    y = "Financial Loss (in Millions USD)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  #Tilt labels for readability
+
+```
+
+This boxplot displays the distribution of financial losses across different industry sectors. While the median financial loss is relatively consistent across sectors, the spread varies noticeably. Sectors like Telecommunications and Education exhibit wider interquartile ranges, suggesting greater variability in outcomes. Additionally, Government and Banking sectors show slightly elevated upper quartiles compared to others. These visual patterns support conducting formal hypothesis testing.
+
+
+# III. Research Questions
+
+Following the initial exploratory analysis and investigation into categorical variables such as **sector** and **attack type**, I refined the research questions to better align with the patterns observed in the data. While the original focus included recovery time, the visualizations suggested that this variable did not have strong explanatory power for financial loss. As a result, I shifted to possibly more explanatory variables seen in EDA.
+
+### Research Question 1:
+**Does the type of cyberattack significantly affect the financial loss incurred?**
+
+- **Statistical Method**: One-way ANOVA
+- **Justification**: This method allows comparison of mean financial loss across different attack types to determine if variation exists between groups.
+
+### Research Question 2: 
+**Does industry sector significantly predict financial loss from cybersecurity incidents?**
+
+- **Statistical Method**: Multiple Linear Regression
+- **Justification**: Multiple linear regression is appropriate for evaluating whether financial loss differs across multiple industry sectors. It allows comparison of means across several groups within a single model while controlling for Type I error.
+
+### Research Question 3:  
+**Is there a significant association between attack type and industry sector in cybersecurity incidents?**
+
+- **Statistical Method**: Chi-Square Test of Independence 
+- **Justification**: Initial data exploration suggested variation in attack type distributions across sectors, indicating a potential relationship. This test evaluates whether that variation is statistically significant.
+
+Together, these questions aim to see which characteristics of a cybersecurity type of attack, affected industry, and their combination best explain the financial impact. Each method selected matches the structure and level of measurement of the variables.
+
+# IV. Methods and Results
+
+This analysis was conducted using **R version 4.4.2** in **RStudio**. All the tests were evaluated at a significance level of **a = 0.05**. For all, model assumptions were checked and diagnostic procedures were performed where required, including tests of normality, variance equality, and independence.
+
+
+## Research Question 1:  
+**Does the type of cyberattack significantly affect financial loss?**
+
+### Model: One-Way ANOVA
+
+```{r anova1}
+#Research question 1
+#Convert to factor
+df$attack_type <- as.factor(df$attack_type)
+
+#Fit ANOVA model
+anova1 <- aov(financial_loss ~ attack_type, data = df)
+summary(anova1)
+
+#ANOVA  plots for Research Question 1
+par(mfrow = c(1, 2))  #side by side
+par(mar = c(4, 4, 2, 1))  #Margins
+
+#Q-Q plot for residual normality
+plot(anova1, which = 2, id.n = 0)
+
+#Residuals vs Fitted for homogeneity of variance
+plot(anova1, which = 1, id.n = 0)
+
+```
+
+### Interpretation and Results
+
+The one-way ANOVA tested whether the mean financial loss differed significantly across different types of cyberattacks. The ANOVA summary output shows a **p-value of 0.681**, which is greater than the significance level of a = 0.05. Therefore, we **fail to reject the null hypothesis**, meaning that there is no statistically significant difference in mean financial loss across attack types.
+
+### Assumption Checks
+
+**1. Normality of Residuals**  
+The Q-Q plot shows a noticeable S-curve shape, suggesting some deviation from normality. However, with the large sample size, ANOVA is generally insensitive to small violations of the normality assumption.
+
+**2. Homogeneity of Variance**  
+The residuals vs. fitted plot displays uniform vertical spread across fitted values, with no clear pattern or funnel shape, suggesting that the homogeneity of variance assumption is met.
+
+Additionally, because all expected cell counts exceeded 5, the chi-square approximation to the true sampling distribution is considered reliable.
+
+### Conclusion
+
+Despite visually distinct distributions across attack types during EDA, the ANOVA model results confirm that **attack type is not a significant predictor of financial loss**. This justifies exploring other variables, such as sector for better explanatory power.
+
+## Research Question 2:  
+**Does industry sector significantly predict financial loss from cybersecurity incidents?**
+
+### Model: Multiple Linear Regression
+
+To assess assumptions for the regression model, we examined the normality of residuals using a Q-Q plot and evaluated homoscedasticity (equal variance) with a residuals vs. fitted plot. These diagnostic checks ensure the validity of the linear regression results.
+
+
+```{r}
+#Research question 2
+#Financial loss as a function of sector
+
+#Sector to factor
+df$sector <- as.factor(df$sector)
+
+#Fit the linear regression model
+model_sector <- lm(financial_loss ~ sector, data = df)
+
+#Model summary
+summary(model_sector)
+
+#Plots
+par(mfrow = c(1, 2))
+par(mar = c(4, 4, 2, 1))
+
+#Q-Q Plot for normality of residuals
+#Shrink residual plots for RQ2
+par(mfrow = c(1, 2))  
+par(mar = c(4, 4, 2, 1))  
+
+#Make the plots smaller
+plot(model_sector, which = 2, id.n = 0, cex.lab = 0.8, cex.axis = 0.8, cex.main = 0.9)
+
+plot(model_sector, which = 1, id.n = 0, cex.lab = 0.8, cex.axis = 0.8, cex.main = 0.9)
+
+```
+
+### Interpretation and Results
+
+A multiple linear regression model was fitted to predict financial loss based on industry sector. 
+
+The model's **overall F-test** yielded a **p-value of 0.2194**, which is greater than the significance level of a = 0.05. Therefore, we **fail to reject the null hypothesis** and conclude that there is no statistically significant relationship between sector and financial loss.
+
+The **adjusted R-squared value was 0.0007564**, meaning that less than 1% of the variation in financial loss is explained by sector alone. This suggests that industry sector by itself is not a strong predictor of financial loss in this dataset.
+
+Although the coefficient estimates showed some sectors (like Education and Healthcare) with slightly lower predicted financial losses compared to the baseline sector, none of the individual sector coefficients were statistically significant at the a = 0.05 level.
+
+
+### Assumption Checks
+
+**1. Normality of Residuals**  
+The Q-Q plot reveals some deviation from normality, particularly at the tails. However, again due to the large sample size, the model is insensitive to these minor violations.
+
+**2. Homoscedasticity**  
+The residuals vs. fitted plot shows relatively even spread across fitted values without major funneling or curvature. Thus, the assumption of homoscedasticity is reasonable.
+
+### Conclusion
+
+Based on the multiple linear regression results, **industry sector does not significantly predict financial loss** in this dataset. Despite some observed variability in EDA boxplots, the differences between sectors are not strong enough to reach statistical significance. This suggests that other factors, possibly not captured in this dataset, may better explain variation in financial loss outcomes.
+
+## Research Question 3:
+**Is there a significant association between attack type and industry sector in cybersecurity incidents?**
+
+### Model: Chi-Square Test of Independence
+
+```{r}
+#Research question 3
+#Create contingency table of attack type by sector
+attack_sector_table <- table(df$attack_type, df$sector)
+
+#Display the table
+attack_sector_table
+
+#Perform Chi-Square Test 
+chisq.test(attack_sector_table)
+
+```
+
+### Interpretation and Results
+
+The chi-square test evaluates whether attack type and sector are statistically associated. So, whether the distribution of attack types differs depending on the industry sector targeted.
+
+The test produced the following results:
+- Chi-squared statistic = 38.46
+- Degrees of freedom = 30
+- p-value = 0.1384
+
+Since the p-value is greater than the significance level a = 0.05, we fail to reject the null hypothesis. This means there is no statistically significant association between the type of cyberattack and the industry sector in this dataset.
+
+Although exploratory data visualization hinted at variation in attack patterns across sectors, this result suggests that such differences are not statistically strong or consistent enough to support a significant association.
+
+### Assumption Checks
+
+**1. Expected Cell Count**
+The chi-square test assumes that expected counts in at least 80% of cells are >= 5. A review of the contingency table confirms that this assumption is met.
+
+**2. Independence of Observations**
+Each row represents a distinct cybersecurity incident. There is no clustering or repeated measurements, so independence is satisfied.
+
+### Conclusion
+
+The chi-square test indicates that **attack type and industry sector are not significantly associated.** While some differences were observed in the raw counts, they do not rise to the level of statistical significance. These findings highlight the importance of validating patterns from exploratory analysis with formal statistical tests.
+
+# V. Discussion and Conclusion
+
+This project examined the factors influencing financial loss in cybersecurity incidents using a dataset of global events from 2015 to 2024. Through exploratory data analysis and inferential statistical modeling in R (version 4.4.2), I evaluated the role of attack type, industry sector, and their association in predicting or explaining variation in financial damage.
+
+### Key Findings
+
+- A one-way ANOVA showed that attack type does not significantly affect financial loss, despite minor differences observed in EDA.
+- A multiple linear regression model testing industry sector as a predictor also found no statistically significant relationship with financial loss.
+- A Chi-Square Test of Independence found no significant association between attack type and industry sector, suggesting that attack patterns do not differ meaningfully across sectors.
+- Across all tests, assumption checks were conducted and reported. While Q-Q plots showed minor deviation from normality, large sample sizes helped maintain the tests' validity.
+
+These findings suggest that **financial loss cannot be reliably predicted by attack type, industry sector, or their association alone in this dataset.** Although minor differences and patterns appeared visually in the exploratory phase, inferential testing did not confirm their statistical significance.
+
+### Reflection and Literature Comparison
+
+Although these outcomes may initially appear counterintuitive, they align with the findings of Edwards, Hofmeyr, and Forrest (2016), who observed that financial losses from cyberattacks often follow heavy-tailed distributions, driven by rare but extreme incidents. Their study highlights how standard variables like sector or attack type often fail to predict loss, because extreme outliers dominate the financial consequences.
+
+This project reinforces the core statistical lesson: **relationships that appear plausible in exploratory analysis and general assumption are not always confirmed through inferential testing.** Even large and well-structured datasets may fail to reveal significance when underlying patterns are subtle or nonlinear.
+
+### Limitations
+- Important contextual factors like organizational size, breach response time, and cybersecurity maturity were not available and could explain additional variation.
+- Some categories, such as Retail, are broad and may group very different types of organizations together, reducing specificity.
+- Financial loss data may involve rounding or estimation, which could introduce noise and mask subtle effects.
+- The project addressed only three research questions using traditional statistical models, which may not capture complex nonlinear relationships.
+
+### Future Directions
+Future research would benefit from:
+- Expanding the dataset with external sources to include variables like breach duration, organizational preparedness, or region-specific regulations.
+- Applying predictive machine learning methods that can capture nonlinear or higher-order effects missed by traditional modeling.
+- Exploring alternative outcome variables beyond financial loss, such as recovery time.
+- Segmenting the analysis by sector size or budget to see if patterns emerge when controlling for scale.
+
+This project highlighted the importance of testing assumptions, interpreting results cautiously, and recognizing that statistical insignificance is still informative. The absence of significant findings emphasizes the complexity of cybersecurity incidents and encourages more nuanced, data-rich research in the future. Ultimately, even non-significant results contribute meaningfully to the evidence base and sharpen future research questions.
+
+# Resources
+
+> *Edwards, B., Hofmeyr, S., & Forrest, S. (2016). Hype and heavy tails: A closer look at data breaches. Journal of Cybersecurity, 2(1), 3–14. https://doi.org/10.1093/cybsec/tyv009*
