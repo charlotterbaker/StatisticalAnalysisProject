@@ -10,11 +10,11 @@ This project evaluates how variables such as attack type, industry sector, and r
 
 ## Testing Performed:
 - **Exploratory Data Analysis:** Understanding relationships between variables and financial loss with summary statistics and visualizations.
-- **One-way ANOVA:**
-- **Multiple Linear Regression:**
-- **Chi-square Test of Independence:**
+- **One-way ANOVA:** Evaluating the type of cyberattack's affect on financial loss incurred.
+- **Multiple Linear Regression:** Testing the relationship between industry sector and financial loss.
+- **Chi-square Test of Independence:** Looking at the association between attack type and industry sector.
 
 ## Technology Used: R Studio
 
-**[Read the full report here:](https://github.com/charlotterbaker/StatisticalAnalysisProject/blob/main/Project%20Report%20.pdf)**
+**[Read the full report and testing here.](https://github.com/charlotterbaker/StatisticalAnalysisProject/blob/main/Project%20Report%20.pdf)**
 
